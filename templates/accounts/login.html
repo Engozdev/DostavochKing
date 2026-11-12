@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Вход{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <section class="col-md-7 col-lg-5">
+    <h1 class="mb-4">Вход</h1>
+    <form method="post" class="vstack gap-3">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      {% include "accounts/form_fields.html" %}
+      <button class="btn btn-primary align-self-start" type="submit">Войти</button>
+    </form>
+    <p class="mt-4 mb-0"><a href="{% url 'accounts:register' %}">Зарегистрироваться</a></p>
+  </section>
+</div>
+{% endblock %}

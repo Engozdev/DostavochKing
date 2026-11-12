@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <section class="col-md-7 col-lg-5">
+    <h1 class="mb-4">Регистрация</h1>
+    <form method="post" class="vstack gap-3">
+      {% csrf_token %}
+      {% include "accounts/form_fields.html" %}
+      <button class="btn btn-primary align-self-start" type="submit">Создать аккаунт</button>
+    </form>
+    <p class="mt-4 mb-0"><a href="{% url 'accounts:login' %}">Войти в аккаунт</a></p>
+  </section>
+</div>
+{% endblock %}
