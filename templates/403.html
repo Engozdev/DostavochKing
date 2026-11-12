@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Доступ ограничен{% endblock %}
+
+{% block content %}
+    <h1>Доступ ограничен</h1>
+    <p>Эта страница недоступна для вашей учётной записи.</p>
+    <a class="btn btn-primary" href="{% url 'catalog:list' %}">В каталог</a>
+{% endblock %}
