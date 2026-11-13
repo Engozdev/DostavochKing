@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Каталог{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Каталог</h1>
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
+  {% for product in products %}
+    <div class="col">
+      <article class="card card-product h-100">
+        {% if product.image_path %}
+          <img class="card-img-top product-image" src="{% static product.image_path %}" alt="" loading="lazy">
+        {% else %}
+          <div class="card-img-top product-image product-placeholder" aria-hidden="true"></div>
+        {% endif %}
+        <div class="card-body d-flex flex-column">
+          <h2 class="h5"><a class="stretched-link text-decoration-none" href="{% url 'catalog:detail' product.pk %}">{{ product.name }}</a></h2>
+          <p class="card-text mb-3">{{ product.description|truncatewords:24 }}</p>
+          <div class="mt-auto d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <strong>{{ product.price|floatformat:2 }} ₽</strong>
+            {% if product.is_available %}
+              <span class="text-success">В наличии</span>
+            {% else %}
+              <span class="text-body-secondary">Нет в наличии</span>
+            {% endif %}
+          </div>
+        </div>
+      </article>
+    </div>
+  {% empty %}
+    <p class="col">В каталоге пока нет товаров.</p>
+  {% endfor %}
+</div>
+{% endblock %}

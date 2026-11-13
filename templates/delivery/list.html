@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Мои доставки{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Мои доставки</h1>
+{% if active_orders %}
+  <section class="mb-4" aria-labelledby="active-deliveries">
+    <h2 id="active-deliveries" class="h4">Активные</h2>
+    {% include "delivery/order_list.html" with orders=active_orders only %}
+  </section>
+{% endif %}
+{% if completed_orders %}
+  <section aria-labelledby="completed-deliveries">
+    <h2 id="completed-deliveries" class="h4">Доставленные</h2>
+    {% include "delivery/order_list.html" with orders=completed_orders only %}
+  </section>
+{% endif %}
+{% if not active_orders and not completed_orders %}
+  <p>У вас пока нет назначенных заказов.</p>
+{% endif %}
+{% endblock %}

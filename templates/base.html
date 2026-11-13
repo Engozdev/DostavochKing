@@ -1,0 +1,49 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Каталог{% endblock %} · ДоставочКинг</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body>
+    <a class="visually-hidden-focusable skip-link" href="#main">К содержимому</a>
+    {% with page=request.resolver_match %}
+        <header class="site-header">
+            <div class="container site-header-inner">
+                <a class="site-brand" href="{% url 'catalog:list' %}">ДоставочКинг</a>
+                <nav class="site-nav" aria-label="Основная навигация">
+                    <a href="{% url 'catalog:list' %}" {% if page.namespace == 'catalog' %}aria-current="page"{% endif %}>Каталог</a>
+                    {% if user.is_authenticated %}
+                        {% if user.role == 'CLIENT' %}
+                            <a href="{% url 'cart:detail' %}" {% if page.namespace == 'cart' or page.url_name == 'checkout' %}aria-current="page"{% endif %}>Корзина</a>
+                            <a href="{% url 'orders:list' %}" {% if page.namespace == 'orders' and page.url_name != 'checkout' %}aria-current="page"{% endif %}>Мои заказы</a>
+                        {% elif user.role == 'COURIER' %}
+                            <a href="{% url 'delivery:list' %}" {% if page.namespace == 'delivery' %}aria-current="page"{% endif %}>Мои доставки</a>
+                        {% elif user.role == 'ADMIN' %}
+                            <a href="{% url 'backoffice:list' %}" {% if page.namespace == 'backoffice' %}aria-current="page"{% endif %}>Все заказы</a>
+                        {% endif %}
+                        <form method="post" action="{% url 'accounts:logout' %}">
+                            {% csrf_token %}
+                            <button class="site-session" type="submit">Выйти</button>
+                        </form>
+                    {% else %}
+                        <a class="site-session" href="{% url 'accounts:login' %}">Войти</a>
+                    {% endif %}
+                </nav>
+            </div>
+        </header>
+    {% endwith %}
+
+    <main id="main" class="container site-main">
+        {% for message in messages %}
+            <div class="alert {% if message.level_tag == 'error' %}alert-danger{% else %}alert-{{ message.level_tag|default:'info' }}{% endif %}" role="{% if message.level_tag == 'error' %}alert{% else %}status{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

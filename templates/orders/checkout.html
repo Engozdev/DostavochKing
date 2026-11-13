@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Оформление заказа{% endblock %}
+{% block content %}
+<h1 class="mb-4">Оформление заказа</h1>
+
+{% if error %}
+  <div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
+{% if items %}
+  <ul class="list-group mb-3">
+    {% for item in items %}
+      <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+        <span>
+          {{ item.product.name }} × {{ item.quantity }}
+          {% if not item.is_available %}
+            <span class="d-block text-danger">Недоступно в выбранном количестве</span>
+          {% endif %}
+        </span>
+        <span>{{ item.line_total|floatformat:2 }} ₽</span>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="fs-5 fw-semibold">Итого {{ total_amount|floatformat:2 }} ₽</p>
+
+  {% if can_checkout %}
+    <form method="post">
+      {% csrf_token %}
+      {{ form.checkout_key }}
+      {{ form.quote }}
+      <div class="mb-3">
+        {{ form.delivery_address.label_tag }}
+        {{ form.delivery_address }}
+        {% for error in form.delivery_address.errors %}
+          <div class="text-danger">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary">Создать заказ</button>
+    </form>
+  {% else %}
+    <p>Измените количество или удалите недоступные товары в корзине.</p>
+  {% endif %}
+  <a class="btn btn-link px-0 mt-2" href="{% url 'cart:detail' %}">Вернуться в корзину</a>
+{% else %}
+  <p>Корзина пуста. Добавьте товары, чтобы оформить заказ.</p>
+  <a class="btn btn-primary" href="{% url 'catalog:list' %}">Перейти в каталог</a>
+{% endif %}
+{% endblock %}

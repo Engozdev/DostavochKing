@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Заказ{% endblock %}
+
+{% block content %}
+<a class="d-inline-block mb-3" href="{% url 'backoffice:list' %}">Все заказы</a>
+<h1 class="h3 text-break">Заказ № {{ order.pk }}</h1>
+<p class="mb-1 text-body-secondary">
+  <time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d.m.Y H:i" }}</time>
+</p>
+<p class="fs-5 fw-semibold">{{ order.get_status_display }}</p>
+
+{% if error %}
+  <p class="alert alert-warning" role="alert">{{ error }}</p>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <dl>
+      <dt>Клиент</dt>
+      <dd class="text-break">
+        {{ order.client.name }}
+        <span class="d-block text-body-secondary">{{ order.client.email }}</span>
+      </dd>
+      <dt>Адрес доставки</dt>
+      <dd class="text-break">{{ order.delivery_address|linebreaksbr }}</dd>
+    </dl>
+
+    <h2 class="h5 mt-4">Состав заказа</h2>
+    <ul class="list-group mb-3">
+      {% for item in order.items.all %}
+        <li class="list-group-item d-flex flex-wrap justify-content-between align-items-start gap-2">
+          <span class="text-break">
+            {{ item.product_name }}
+            <span class="d-block text-body-secondary">{{ item.unit_price|floatformat:2 }} ₽ × {{ item.quantity }}</span>
+          </span>
+          <span>{{ item.line_total|floatformat:2 }} ₽</span>
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="fs-5 fw-semibold mb-0">Итого {{ order.total_amount|floatformat:2 }} ₽</p>
+  </div>
+
+  <section class="col-lg-5" aria-labelledby="courier-heading">
+    <div class="card">
+      <div class="card-body">
+        <h2 id="courier-heading" class="h5">Курьер</h2>
+        {% if order.courier %}
+          <p class="text-break">
+            <strong>{{ order.courier.name }}</strong>
+            <span class="d-block text-body-secondary">{{ order.courier.email }}</span>
+          </p>
+        {% else %}
+          <p>Не назначен</p>
+        {% endif %}
+        {% if order.assigned_at or order.accepted_at %}
+          <dl class="mb-3">
+            {% if order.assigned_at %}
+              <dt>Назначение</dt>
+              <dd>
+                <time datetime="{{ order.assigned_at|date:'c' }}">{{ order.assigned_at|date:"d.m.Y H:i" }}</time>
+              </dd>
+            {% endif %}
+            {% if order.accepted_at %}
+              <dt>Принятие заказа</dt>
+              <dd>
+                <time datetime="{{ order.accepted_at|date:'c' }}">{{ order.accepted_at|date:"d.m.Y H:i" }}</time>
+              </dd>
+            {% endif %}
+          </dl>
+        {% endif %}
+        {% if form %}
+          {% if has_eligible_couriers %}
+            <form method="post" action="{% url 'backoffice:assign' order.pk %}" class="vstack gap-3">
+              {% csrf_token %}
+              {{ form.assignment_version }}
+              {% include "accounts/form_fields.html" %}
+              <button class="btn btn-primary align-self-start" type="submit">
+                {% if order.courier %}Переназначить курьера{% else %}Назначить курьера{% endif %}
+              </button>
+            </form>
+          {% else %}
+            <p class="mb-0 text-body-secondary">Нет активных курьеров для назначения.</p>
+            {% if form.courier.errors %}
+              <div class="invalid-feedback d-block" role="alert">{{ form.courier.errors }}</div>
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </section>
+</div>
+
+{% with history=order.status_history.all %}
+  {% if history %}
+    <h2 class="h5 mt-4">История статусов</h2>
+    <ul class="list-group">
+      {% for transition in history %}
+        <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+          <span>{{ transition.get_to_status_display }}</span>
+          <time class="text-body-secondary" datetime="{{ transition.created_at|date:'c' }}">
+            {{ transition.created_at|date:"d.m.Y H:i" }}
+          </time>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+{% endblock %}

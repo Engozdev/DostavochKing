@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Учебная оплата{% endblock %}
+{% block content %}
+<h1 class="mb-3">Учебная оплата</h1>
+<p class="text-break">Заказ № {{ order.pk }}</p>
+<p class="fs-5 fw-semibold">Итого {{ order.total_amount|floatformat:2 }} ₽</p>
+<p>Выберите результат учебного платежа. Деньги не списываются.</p>
+
+{% if form_error %}
+  <div class="alert alert-danger" role="alert">Выберите результат и отправьте форму снова.</div>
+{% endif %}
+{% if attempt.failure_reason %}
+  <div class="alert alert-danger" role="alert">{{ attempt.get_failure_reason_display }}</div>
+{% endif %}
+
+<form method="post" class="d-flex flex-wrap gap-2">
+  {% csrf_token %}
+  {{ form.attempt_key }}
+  <button type="submit" name="outcome" value="{{ success_outcome }}" class="btn btn-primary">
+    {% if attempt.failure_reason %}Повторить учебную оплату{% else %}Имитировать успешную оплату{% endif %}
+  </button>
+  <button type="submit" name="outcome" value="{{ failure_outcome }}" class="btn btn-outline-secondary">
+    Имитировать ошибку оплаты
+  </button>
+</form>
+<a class="btn btn-link px-0 mt-2" href="{% url 'orders:detail' order.pk %}">Вернуться к заказу</a>
+{% endblock %}

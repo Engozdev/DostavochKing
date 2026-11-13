@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Все заказы{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Все заказы</h1>
+<form method="get" action="{% url 'backoffice:list' %}" class="d-flex flex-wrap align-items-end gap-2 mb-4">
+  <div>
+    <label class="form-label" for="order-status">Статус</label>
+    <select class="form-select" id="order-status" name="status">
+      <option value="">Все статусы</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}"{% if value == selected_status %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button class="btn btn-primary" type="submit">Применить</button>
+</form>
+{% if page_obj.object_list %}
+  <ul class="list-group">
+    {% for order in page_obj %}
+      <li class="list-group-item p-3">
+        <div class="row gx-4 gy-2">
+          <div class="col-12 col-lg-5">
+            <a class="fw-semibold text-break" href="{% url 'backoffice:detail' order.pk %}">Заказ № {{ order.pk }}</a>
+            <time class="d-block text-body-secondary" datetime="{{ order.created_at|date:'c' }}">
+              {{ order.created_at|date:"d.m.Y H:i" }}
+            </time>
+          </div>
+          <dl class="col-12 col-sm-6 col-lg-4 mb-0">
+            <dt class="small text-body-secondary">Клиент</dt>
+            <dd class="mb-1 text-break">{{ order.client.name }}</dd>
+            <dt class="small text-body-secondary">Курьер</dt>
+            <dd class="mb-0 text-break">
+              {% if order.courier %}{{ order.courier.name }}{% else %}Не назначен{% endif %}
+            </dd>
+          </dl>
+          <div class="col-12 col-sm-6 col-lg-3">
+            <p class="mb-1">{{ order.get_status_display }}</p>
+            <p class="mb-0 fw-semibold">{{ order.total_amount|floatformat:2 }} ₽</p>
+          </div>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if page_obj.has_other_pages %}
+    <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4" aria-label="Страницы списка заказов">
+      <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+      <div class="d-flex flex-wrap gap-2">
+        {% if page_obj.has_previous %}
+          <a class="btn btn-outline-primary" rel="prev" href="{% querystring status=selected_status page=page_obj.previous_page_number %}">Предыдущая</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <a class="btn btn-outline-primary" rel="next" href="{% querystring status=selected_status page=page_obj.next_page_number %}">Следующая</a>
+        {% endif %}
+      </div>
+    </nav>
+  {% endif %}
+{% elif selected_status %}
+  <p>Заказов с таким статусом пока нет.</p>
+{% else %}
+  <p>Заказов пока нет.</p>
+{% endif %}
+{% endblock %}
