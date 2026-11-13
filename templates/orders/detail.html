@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Заказ{% endblock %}
+{% block content %}
+<a class="d-inline-block mb-3" href="{% url 'orders:list' %}">Все мои заказы</a>
+<h1 class="h3 text-break">Заказ № {{ order.pk }}</h1>
+<p class="text-body-secondary">{{ order.created_at|date:"d.m.Y H:i" }}</p>
+<p class="fs-5 fw-semibold">{{ order.get_status_display }}</p>
+
+<dl>
+  <dt>Адрес доставки</dt>
+  <dd class="text-break">{{ order.delivery_address|linebreaksbr }}</dd>
+</dl>
+
+<h2 class="h5 mt-4">Состав заказа</h2>
+<ul class="list-group mb-3">
+  {% for item in order.items.all %}
+    <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+      <span>{{ item.product_name }} · {{ item.unit_price|floatformat:2 }} ₽ × {{ item.quantity }}</span>
+      <span>{{ item.line_total|floatformat:2 }} ₽</span>
+    </li>
+  {% endfor %}
+</ul>
+<p class="fs-5 fw-semibold">Итого {{ order.total_amount|floatformat:2 }} ₽</p>
+
+{% if order.status == 'CREATED' %}
+  <a class="btn btn-primary" href="{% url 'orders:mock_payment' order.pk %}">Перейти к учебной оплате</a>
+{% endif %}
+
+{% with history=order.status_history.all %}
+  {% if history %}
+    <h2 class="h5 mt-4">История статусов</h2>
+    <ul class="list-group">
+      {% for transition in history %}
+        <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+          <span>{{ transition.get_to_status_display }}</span>
+          <time class="text-body-secondary" datetime="{{ transition.created_at|date:'c' }}">
+            {{ transition.created_at|date:"d.m.Y H:i" }}
+          </time>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+{% endblock %}

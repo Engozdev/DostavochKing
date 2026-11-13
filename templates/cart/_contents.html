@@ -1,0 +1,63 @@
+{% load l10n %}
+
+<div data-cart-contents>
+{% if errors %}
+  <div class="alert alert-danger" role="alert">
+    {% for error in errors %}<p class="mb-0">{{ error }}</p>{% endfor %}
+  </div>
+{% endif %}
+{% if items %}
+  <noscript><p>Чтобы сохранить количество, нажмите Enter в поле ввода.</p></noscript>
+  <ul class="list-group mb-4">
+    {% for item in items %}
+      <li class="list-group-item p-3">
+        <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+          <div>
+            <h2 class="h5">
+              {% if item.product.is_active %}
+                <a href="{% url 'catalog:detail' item.product_id %}">{{ item.product.name }}</a>
+              {% else %}
+                {{ item.product.name }}
+              {% endif %}
+            </h2>
+            <p class="mb-1">{{ item.product.price|floatformat:2 }} ₽ × {{ item.quantity }} = {{ item.line_total|floatformat:2 }} ₽</p>
+            {% if not item.is_available %}
+              {% if item.product.is_available %}
+                <p class="text-danger mb-0">Доступно {{ item.product.stock_quantity }} шт. Уменьшите количество.</p>
+              {% else %}
+                <p class="text-danger mb-0">Товар недоступен. Удалите его из корзины.</p>
+              {% endif %}
+            {% endif %}
+          </div>
+          <div class="d-flex align-items-end flex-wrap gap-2">
+            {% if item.product.is_available %}
+              <form method="post" action="{% url 'cart:update' item.product_id %}" data-cart-quantity>
+                {% csrf_token %}
+                <input type="hidden" name="version" value="{{ cart.version|unlocalize }}">
+                <div>
+                  <label class="form-label" for="quantity-{{ item.product_id|unlocalize }}">Количество</label>
+                  <input class="form-control" id="quantity-{{ item.product_id|unlocalize }}" name="quantity" type="number" min="1" max="{{ item.product.stock_quantity|unlocalize }}" value="{{ item.quantity|unlocalize }}" required>
+                </div>
+              </form>
+            {% endif %}
+            <form method="post" action="{% url 'cart:remove' item.product_id %}" data-cart-remove>
+              {% csrf_token %}
+              <input type="hidden" name="version" value="{{ cart.version|unlocalize }}">
+              <button class="btn btn-outline-secondary" type="submit" aria-label="Удалить из корзины: {{ item.product.name }}">Удалить</button>
+            </form>
+          </div>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <p class="h4 mb-0">Итого {{ total|floatformat:2 }} ₽</p>
+    {% if can_checkout %}
+      <a class="btn btn-primary" href="{% url 'orders:checkout' %}" data-cart-checkout>Оформить заказ</a>
+    {% endif %}
+  </div>
+{% else %}
+  <p>В корзине пока нет товаров.</p>
+  <a class="btn btn-primary" href="{% url 'catalog:list' %}">Открыть каталог</a>
+{% endif %}
+</div>

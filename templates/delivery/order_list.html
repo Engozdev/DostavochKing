@@ -1,0 +1,11 @@
+<div class="list-group">
+  {% for order in orders %}
+    <a class="list-group-item list-group-item-action p-3" href="{% url 'delivery:detail' order.pk %}">
+      <span class="d-flex flex-wrap justify-content-between gap-2 mb-1">
+        <span class="fw-semibold text-break">Заказ № {{ order.pk }}</span>
+        <span>{{ order.get_status_display }}</span>
+      </span>
+      <span class="d-block text-body-secondary text-break">{{ order.delivery_address }}</span>
+    </a>
+  {% endfor %}
+</div>

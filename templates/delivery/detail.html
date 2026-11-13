@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Доставка{% endblock %}
+
+{% block content %}
+<a class="d-inline-block mb-3" href="{% url 'delivery:list' %}">Все мои доставки</a>
+<h1 class="h3 text-break">Заказ № {{ order.pk }}</h1>
+<p class="fs-5 fw-semibold">{{ order.get_status_display }}</p>
+
+{% if error %}
+  <p class="alert alert-warning" role="alert">{{ error }}</p>
+{% endif %}
+
+<dl>
+  <dt>Адрес доставки</dt>
+  <dd class="text-break">{{ order.delivery_address|linebreaksbr }}</dd>
+</dl>
+
+<h2 class="h5 mt-4">Состав заказа</h2>
+<ul class="list-group mb-4">
+  {% for item in order.items.all %}
+    <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+      <span class="text-break">{{ item.product_name }}</span>
+      <span>{{ item.quantity }} шт.</span>
+    </li>
+  {% endfor %}
+</ul>
+
+{% if action_name %}
+  <form method="post" action="{% url action_name order.pk %}">
+    {% csrf_token %}
+    <button class="btn btn-primary" type="submit">{{ action_label }}</button>
+  </form>
+{% endif %}
+{% endblock %}

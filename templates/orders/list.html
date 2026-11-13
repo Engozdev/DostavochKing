@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Мои заказы{% endblock %}
+{% block content %}
+<h1 class="mb-4">Мои заказы</h1>
+<div class="list-group">
+  {% for order in orders %}
+    <a class="list-group-item list-group-item-action" href="{% url 'orders:detail' order.pk %}">
+      <span class="d-block fw-semibold text-break">Заказ № {{ order.pk }}</span>
+      <span class="d-block text-body-secondary">{{ order.created_at|date:"d.m.Y H:i" }}</span>
+      <span class="d-block">{{ order.get_status_display }} · {{ order.total_amount|floatformat:2 }} ₽</span>
+    </a>
+  {% empty %}
+    <p>У вас пока нет заказов.</p>
+    <div><a class="btn btn-primary" href="{% url 'catalog:list' %}">Перейти в каталог</a></div>
+  {% endfor %}
+</div>
+{% endblock %}

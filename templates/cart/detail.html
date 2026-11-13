@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Корзина{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Корзина</h1>
+<div data-cart>
+  <p class="alert alert-danger" role="alert" data-cart-feedback hidden></p>
+  {% include "cart/_contents.html" %}
+</div>
+<script src="{% static 'js/cart.js' %}" defer></script>
+{% endblock %}
