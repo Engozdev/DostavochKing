@@ -1,5 +1,8 @@
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
+
+from django.core.exceptions import ImproperlyConfigured
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,11 +15,38 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+PAYMENT_PROVIDER = os.environ.get("PAYMENT_PROVIDER", "mock").strip()
+if PAYMENT_PROVIDER not in {"mock", "yookassa"}:
+    raise ImproperlyConfigured("PAYMENT_PROVIDER must be mock or yookassa.")
+
+YOOKASSA_SHOP_ID = os.environ.get("YOOKASSA_SHOP_ID", "").strip()
+YOOKASSA_SECRET_KEY = os.environ.get("YOOKASSA_SECRET_KEY", "").strip()
+YOOKASSA_RETURN_BASE_URL = os.environ.get("YOOKASSA_RETURN_BASE_URL", "http://127.0.0.1:8000").strip()
+if PAYMENT_PROVIDER == "yookassa":
+    try:
+        return_base = urlsplit(YOOKASSA_RETURN_BASE_URL)
+        if (
+            return_base.scheme not in {"http", "https"}
+            or not return_base.hostname
+            or return_base.port == 0
+            or return_base.username is not None
+            or return_base.path not in {"", "/"}
+            or return_base.query
+            or return_base.fragment
+        ):
+            raise ValueError
+    except ValueError:
+        raise ImproperlyConfigured("YOOKASSA_RETURN_BASE_URL must be an HTTP(S) origin.") from None
+
+    YOOKASSA_RETURN_BASE_URL = f"{return_base.scheme}://{return_base.netloc}"
+    CSRF_TRUSTED_ORIGINS = [YOOKASSA_RETURN_BASE_URL]
+
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.postgres",
     "django.contrib.staticfiles",
     "accounts",
     "catalog",
@@ -87,4 +117,5 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
