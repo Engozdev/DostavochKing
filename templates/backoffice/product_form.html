@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if product %}Редактирование товара{% else %}Новый товар{% endif %}{% endblock %}
+
+{% block content %}
+<a class="d-inline-block mb-3" href="{% url 'backoffice:products' %}">Все товары</a>
+<h1 class="mb-4">{% if product %}Редактирование товара{% else %}Новый товар{% endif %}</h1>
+{% if error %}<p class="alert alert-danger" role="alert">{{ error }}</p>{% endif %}
+<div class="row g-4 align-items-start">
+  <div class="col-12 col-lg-7">
+    <form method="post" enctype="multipart/form-data" class="d-grid gap-3">
+      {% csrf_token %}
+      {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+      {% include "accounts/form_fields.html" %}
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-primary" type="submit">{% if product %}Сохранить{% else %}Добавить товар{% endif %}</button>
+        <a class="btn btn-outline-primary" href="{% url 'backoffice:products' %}">Отмена</a>
+      </div>
+    </form>
+  </div>
+  {% if product.uploaded_image or product.image_path %}
+    <div class="col-12 col-sm-6 col-lg-4">
+      {% if product.uploaded_image %}
+        <img class="product-image rounded" src="{% url 'catalog:image' product.pk %}" alt="Текущее фото товара">
+      {% else %}
+        <img class="product-image rounded" src="{% static product.image_path %}" alt="Текущее фото товара">
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

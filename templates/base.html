@@ -23,7 +23,9 @@
                         {% elif user.role == 'COURIER' %}
                             <a href="{% url 'delivery:list' %}" {% if page.namespace == 'delivery' %}aria-current="page"{% endif %}>Мои доставки</a>
                         {% elif user.role == 'ADMIN' %}
-                            <a href="{% url 'backoffice:list' %}" {% if page.namespace == 'backoffice' %}aria-current="page"{% endif %}>Все заказы</a>
+                            <a href="{% url 'backoffice:list' %}" {% if page.view_name == 'backoffice:list' or page.view_name == 'backoffice:detail' or page.view_name == 'backoffice:assign' %}aria-current="page"{% endif %}>Все заказы</a>
+                            <a href="{% url 'backoffice:products' %}" {% if page.view_name == 'backoffice:products' or page.view_name == 'backoffice:product_create' or page.view_name == 'backoffice:product_edit' %}aria-current="page"{% endif %}>Товары</a>
+                            <a href="{% url 'backoffice:users' %}" {% if page.view_name == 'backoffice:users' or page.view_name == 'backoffice:user_block' %}aria-current="page"{% endif %}>Пользователи</a>
                         {% endif %}
                         <form method="post" action="{% url 'accounts:logout' %}">
                             {% csrf_token %}

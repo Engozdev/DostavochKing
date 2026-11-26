@@ -11,6 +11,7 @@ class Order(models.Model):
         HANDED_TO_COURIER = "HANDED_TO_COURIER", "Передан курьеру"
         IN_TRANSIT = "IN_TRANSIT", "В пути"
         DELIVERED = "DELIVERED", "Доставлен"
+        CANCELLED = "CANCELLED", "Отменён"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     client = models.ForeignKey(

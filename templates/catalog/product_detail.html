@@ -7,7 +7,9 @@
 <p class="mb-4"><a href="{% url 'catalog:list' %}">Все товары</a></p>
 <div class="row align-items-start g-4">
   <div class="col-md-6">
-    {% if product.image_path %}
+    {% if product.uploaded_image %}
+      <img class="product-image rounded" src="{% url 'catalog:image' product.pk %}" alt="{{ product.name }}">
+    {% elif product.image_path %}
       <img class="product-image rounded" src="{% static product.image_path %}" alt="{{ product.name }}">
     {% else %}
       <div class="product-image product-placeholder rounded" aria-hidden="true"></div>

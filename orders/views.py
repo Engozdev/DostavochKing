@@ -1,13 +1,23 @@
+from functools import partial
 from uuid import uuid4
 
+from django.conf import settings
+from django.contrib import messages
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_http_methods, require_safe
+from django.urls import reverse
+from django.views.decorators.http import require_http_methods, require_POST, require_safe
 
 from accounts.access import client_required
+from payments.models import PaymentAttempt
+from payments.services import can_repeat_creation
 
 from .forms import CheckoutForm
+from .models import Order
 from .services import (
+    CancellationConflict,
     CheckoutConflict,
+    can_cancel_order,
+    cancel_order,
     checkout_items_available,
     create_order,
     get_checkout,
@@ -56,7 +66,8 @@ def checkout(request):
             error=str(error),
             status=409,
         )
-    return redirect("orders:mock_payment", order_id=order.pk)
+    route = "orders:detail" if settings.PAYMENT_PROVIDER == "yookassa" else "orders:mock_payment"
+    return redirect(route, order_id=order.pk)
 
 
 @client_required
@@ -65,8 +76,59 @@ def order_list(request):
     return render(request, "orders/list.html", {"orders": list_client_orders(request.user)})
 
 
+def _render_detail(request, order, *, error="", status=200):
+    yookassa_enabled = settings.PAYMENT_PROVIDER == "yookassa"
+    attempt = order.payment_attempts.filter(provider="yookassa").first()
+    payment_action = ""
+    payment_requires_review = False
+    can_check_payment = False
+    if yookassa_enabled and order.status == Order.Status.CREATED:
+        if attempt is None:
+            payment_action = "Оплатить картой"
+        elif attempt.result == PaymentAttempt.Result.FAILED:
+            payment_action = "Повторить оплату"
+        elif attempt.result == PaymentAttempt.Result.PENDING:
+            if attempt.provider_payment_id:
+                payment_action = "Продолжить оплату"
+                can_check_payment = True
+            elif can_repeat_creation(attempt):
+                payment_action = "Повторить подключение к ЮKassa"
+            else:
+                payment_requires_review = True
+
+    return render(request, "orders/detail.html", {
+        "order": order,
+        "can_cancel": can_cancel_order(order),
+        "error": error,
+        "yookassa_enabled": yookassa_enabled,
+        "yookassa_attempt": attempt,
+        "payment_action": payment_action,
+        "payment_requires_review": payment_requires_review,
+        "can_check_payment": can_check_payment,
+    }, status=status)
+
+
 @client_required
 @require_safe
 def detail(request, order_id):
+    return _render_detail(request, get_client_order(request.user, order_id))
+
+
+def _detail_url(order_id):
+    return reverse("orders:detail", kwargs={"order_id": order_id})
+
+
+@partial(client_required, login_next=_detail_url)
+@require_POST
+def cancel(request, order_id):
+    try:
+        cancel_order(request.user, order_id=order_id)
+    except CancellationConflict as error:
+        order = get_client_order(request.user, order_id)
+        return _render_detail(request, order, error=str(error), status=409)
     order = get_client_order(request.user, order_id)
-    return render(request, "orders/detail.html", {"order": order})
+    if order.payment_attempts.filter(provider="yookassa", refunds__status="SUCCEEDED").exists():
+        messages.success(request, "Заказ отменён. Возврат средств оформлен.")
+    else:
+        messages.success(request, "Заказ отменён.")
+    return redirect("orders:detail", order_id=order_id)

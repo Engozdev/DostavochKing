@@ -7,6 +7,10 @@
 <p class="text-body-secondary">{{ order.created_at|date:"d.m.Y H:i" }}</p>
 <p class="fs-5 fw-semibold">{{ order.get_status_display }}</p>
 
+{% if error %}
+  <p class="alert alert-warning" role="alert">{{ error }}</p>
+{% endif %}
+
 <dl>
   <dt>Адрес доставки</dt>
   <dd class="text-break">{{ order.delivery_address|linebreaksbr }}</dd>
@@ -24,7 +28,41 @@
 <p class="fs-5 fw-semibold">Итого {{ order.total_amount|floatformat:2 }} ₽</p>
 
 {% if order.status == 'CREATED' %}
-  <a class="btn btn-primary" href="{% url 'orders:mock_payment' order.pk %}">Перейти к учебной оплате</a>
+  {% if yookassa_enabled %}
+    <p class="text-body-secondary">Безопасная онлайн-оплата через ЮKassa.</p>
+    {% if yookassa_attempt.result == 'FAILED' %}
+      <p class="alert alert-warning" role="alert">{{ yookassa_attempt.get_failure_reason_display }}</p>
+    {% elif yookassa_attempt.failure_reason == 'PRODUCT_UNAVAILABLE' %}
+      <p class="alert alert-warning" role="alert">ЮKassa подтвердила платёж, но товаров больше нет в нужном количестве. Обратитесь к администратору.</p>
+    {% elif payment_requires_review %}
+      <p class="alert alert-warning" role="alert">Не удалось подтвердить создание платежа. Обратитесь к администратору.</p>
+    {% elif yookassa_attempt.result == 'PENDING' and can_check_payment %}
+      <p>Ожидаем подтверждения оплаты от ЮKassa.</p>
+    {% endif %}
+    <div class="d-flex flex-wrap gap-2">
+      {% if payment_action %}
+        <form method="post" action="{% url 'orders:payment_start' order.pk %}">
+          {% csrf_token %}
+          <button class="btn btn-primary" type="submit">{{ payment_action }}</button>
+        </form>
+      {% endif %}
+      {% if can_check_payment %}
+        <a class="btn btn-outline-secondary" href="{% url 'orders:payment_return' order.pk yookassa_attempt.attempt_key %}">Проверить оплату</a>
+      {% endif %}
+    </div>
+  {% elif yookassa_attempt %}
+    <p class="alert alert-warning" role="alert">Для этого заказа требуется оплата через ЮKassa.</p>
+  {% else %}
+    <a class="btn btn-primary" href="{% url 'orders:mock_payment' order.pk %}">Перейти к учебной оплате</a>
+  {% endif %}
+{% elif yookassa_attempt.result == 'SUCCEEDED' %}
+  <p>Оплата через ЮKassa подтверждена.</p>
+{% endif %}
+{% if can_cancel %}
+  <form method="post" action="{% url 'orders:cancel' order.pk %}">
+    {% csrf_token %}
+    <button class="btn btn-outline-danger" type="submit">Отменить заказ</button>
+  </form>
 {% endif %}
 
 {% with history=order.status_history.all %}

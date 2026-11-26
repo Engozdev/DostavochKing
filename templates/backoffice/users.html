@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load l10n %}
+
+{% block title %}Пользователи{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Пользователи</h1>
+
+{% if error %}
+  <div class="alert alert-warning" role="alert">
+    <p class="{% if not error.orders %}mb-0{% endif %}">{{ error }}</p>
+    {% if error.orders %}
+      <ul class="mb-0">
+        {% for order in error.orders %}
+          <li><a class="alert-link text-break" href="{% url 'backoffice:detail' order.pk %}">Заказ № {{ order.pk }}</a> · {{ order.get_status_display }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+{% endif %}
+
+<ul class="list-group">
+  {% for account in page_obj %}
+    <li class="list-group-item p-3">
+      <div class="row align-items-center gx-4 gy-2">
+        <div class="col-12 col-lg-5">
+          <strong class="d-block text-break">{{ account.name }}</strong>
+          <span class="text-body-secondary text-break">{{ account.email }}</span>
+        </div>
+        <div class="col-6 col-sm-4 col-lg-2">{{ account.get_role_display }}</div>
+        <div class="col-6 col-sm-4 col-lg-2">
+          {% if account.is_active %}Активна{% else %}Заблокирована{% endif %}
+        </div>
+        {% if account.is_active and account.pk != user.pk %}
+          <form method="post" action="{% url 'backoffice:user_block' account.pk %}?page={{ page_obj.number|unlocalize }}" class="col-12 col-sm-4 col-lg-3 text-sm-end">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger" type="submit" aria-label="Заблокировать учётную запись {{ account.email }}">Заблокировать</button>
+          </form>
+        {% endif %}
+      </div>
+    </li>
+  {% endfor %}
+</ul>
+
+{% if page_obj.has_other_pages %}
+  <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4" aria-label="Страницы списка пользователей">
+    <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+    <div class="d-flex flex-wrap gap-2">
+      {% if page_obj.has_previous %}
+        <a class="btn btn-outline-primary" rel="prev" href="{% url 'backoffice:users' %}?page={{ page_obj.previous_page_number|unlocalize }}">Предыдущая</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a class="btn btn-outline-primary" rel="next" href="{% url 'backoffice:users' %}?page={{ page_obj.next_page_number|unlocalize }}">Следующая</a>
+      {% endif %}
+    </div>
+  </nav>
+{% endif %}
+{% endblock %}

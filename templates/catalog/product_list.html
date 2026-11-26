@@ -5,11 +5,23 @@
 
 {% block content %}
 <h1 class="mb-4">Каталог</h1>
+<form method="get" action="{% url 'catalog:list' %}" class="d-flex flex-wrap align-items-end gap-2 mb-4" role="search">
+  <div>
+    <label class="form-label" for="product-search">Название товара</label>
+    <input class="form-control" type="search" id="product-search" name="q" value="{{ search_query }}">
+  </div>
+  <button class="btn btn-primary" type="submit">Найти</button>
+  {% if search_query %}
+    <a class="btn btn-outline-primary" href="{% url 'catalog:list' %}">Сбросить</a>
+  {% endif %}
+</form>
 <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4">
-  {% for product in products %}
+  {% for product in page_obj %}
     <div class="col">
       <article class="card card-product h-100">
-        {% if product.image_path %}
+        {% if product.uploaded_image %}
+          <img class="card-img-top product-image" src="{% url 'catalog:image' product.pk %}" alt="" loading="lazy">
+        {% elif product.image_path %}
           <img class="card-img-top product-image" src="{% static product.image_path %}" alt="" loading="lazy">
         {% else %}
           <div class="card-img-top product-image product-placeholder" aria-hidden="true"></div>
@@ -29,7 +41,22 @@
       </article>
     </div>
   {% empty %}
-    <p class="col">В каталоге пока нет товаров.</p>
+    <p class="col-12">
+      {% if search_query %}По вашему запросу ничего не найдено.{% else %}В каталоге пока нет товаров.{% endif %}
+    </p>
   {% endfor %}
 </div>
+{% if page_obj.has_other_pages %}
+  <nav class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4" aria-label="Страницы каталога">
+    <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+    <div class="d-flex flex-wrap gap-2">
+      {% if page_obj.has_previous %}
+        <a class="btn btn-outline-primary" rel="prev" href="{% querystring q=search_query|default:None page=page_obj.previous_page_number %}">Предыдущая</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a class="btn btn-outline-primary" rel="next" href="{% querystring q=search_query|default:None page=page_obj.next_page_number %}">Следующая</a>
+      {% endif %}
+    </div>
+  </nav>
+{% endif %}
 {% endblock %}

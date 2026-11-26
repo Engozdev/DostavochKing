@@ -1,19 +1,22 @@
 import hashlib
 import json
-from decimal import Decimal
+from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 
 from django.core import signing
-from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import connection, transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from accounts.access import require_admin, require_client, require_courier
 from accounts.models import User
+from accounts.services import lock_users
 from cart.services import advance_cart_version, get_cart, get_cart_items, lock_cart
 from catalog.models import Product
 from payments.gateway import MockPaymentGateway
-from payments.models import PaymentAttempt
+from payments.models import PaymentAttempt, PaymentRefund
+from payments.yookassa import YooKassaError, YooKassaGateway
 
 from .models import Order, OrderItem, OrderStatusHistory
 
@@ -22,6 +25,10 @@ QUOTE_SALT = "orders.checkout"
 
 
 class CheckoutConflict(Exception):
+    pass
+
+
+class CancellationConflict(Exception):
     pass
 
 
@@ -118,9 +125,141 @@ def get_client_order(client, order_id):
     return get_object_or_404(list_client_orders(client), pk=order_id)
 
 
+def can_cancel_order(order):
+    return order.status == Order.Status.CONFIRMED
+
+
+def _lock_cancellation_products(order):
+    quantities = dict(order.items.values_list("product_id", "quantity"))
+    products = list(Product.objects.select_for_update().filter(pk__in=quantities).order_by("pk"))
+    _, max_stock = connection.ops.integer_field_range("PositiveIntegerField")
+    for product in products:
+        restored_stock = product.stock_quantity + quantities[product.pk]
+        if max_stock is not None and restored_stock > max_stock:
+            raise CancellationConflict("Не удалось вернуть товары на склад. Обратитесь к администратору.")
+    return products, quantities
+
+
+def _apply_cancellation(order, client, products, quantities):
+    for product in products:
+        product.stock_quantity += quantities[product.pk]
+    Product.objects.bulk_update(products, ["stock_quantity"])
+
+    order.status = Order.Status.CANCELLED
+    order.save(update_fields=["status", "updated_at"])
+    OrderStatusHistory.objects.create(
+        order=order, actor=client, from_status=Order.Status.CONFIRMED, to_status=Order.Status.CANCELLED
+    )
+    return order
+
+
+@transaction.atomic
+def _prepare_yookassa_refund(client, order_id):
+    order = get_object_or_404(list_client_orders(client).select_for_update(), pk=order_id)
+    if order.status == Order.Status.CANCELLED:
+        return None
+    if not can_cancel_order(order):
+        raise CancellationConflict("Отменить можно только подтверждённый заказ до его принятия курьером.")
+
+    # Validate the local part before a remote refund can be created.
+    _lock_cancellation_products(order)
+    payment = order.payment_attempts.filter(
+        provider="yookassa", result=PaymentAttempt.Result.SUCCEEDED
+    ).first()
+    if payment is None:
+        return None
+
+    refund = payment.refunds.filter(status=PaymentRefund.Status.SUCCEEDED).first()
+    if refund is None:
+        refund = payment.refunds.filter(status=PaymentRefund.Status.PENDING).first()
+    if refund is None:
+        refund = PaymentRefund.objects.create(
+            payment_attempt=payment,
+            amount=payment.amount,
+            currency=payment.currency,
+        )
+    return refund.pk
+
+
+def _validate_refund(refund, payment, response):
+    refund_id = response.get("id")
+    status = response.get("status")
+    try:
+        amount = response["amount"]["value"]
+        amount_matches = isinstance(amount, str) and Decimal(amount) == refund.amount
+        currency_matches = response["amount"]["currency"] == refund.currency
+    except (InvalidOperation, KeyError, TypeError, ValueError):
+        amount_matches = currency_matches = False
+
+    if (
+        not isinstance(refund_id, str)
+        or not refund_id
+        or len(refund_id) > 128
+        or (refund.provider_refund_id and refund_id != refund.provider_refund_id)
+        or response.get("payment_id") != payment.provider_payment_id
+        or not amount_matches
+        or not currency_matches
+        or status not in ("pending", "succeeded", "canceled")
+    ):
+        raise YooKassaError("Не удалось сверить данные возврата с ЮKassa.")
+
+
+@transaction.atomic
+def _cancel_order(client, order_id, refund_id):
+    order = get_object_or_404(list_client_orders(client).select_for_update(), pk=order_id)
+    if order.status == Order.Status.CANCELLED:
+        return order, ""
+    if not can_cancel_order(order):
+        raise CancellationConflict("Отменить можно только подтверждённый заказ до его принятия курьером.")
+
+    products, quantities = _lock_cancellation_products(order)
+    if refund_id is not None:
+        refund = get_object_or_404(
+            PaymentRefund.objects.select_for_update().select_related("payment_attempt"),
+            pk=refund_id,
+            payment_attempt__order=order,
+        )
+        payment = refund.payment_attempt
+        if refund.status != PaymentRefund.Status.SUCCEEDED:
+            if refund.provider_refund_id:
+                response = YooKassaGateway.get_refund(refund.provider_refund_id)
+            elif timezone.now() >= refund.created_at + timedelta(hours=24):
+                return order, "Не удалось подтвердить создание возврата. Обратитесь к администратору."
+            else:
+                response = YooKassaGateway.create_refund(
+                    payment_id=payment.provider_payment_id,
+                    amount=refund.amount,
+                    currency=refund.currency,
+                    idempotence_key=refund.pk,
+                    description=f"Возврат заказа {order.pk}",
+                )
+            _validate_refund(refund, payment, response)
+            refund.provider_refund_id = response["id"]
+            refund.status = response["status"].upper()
+            refund.save(update_fields=["provider_refund_id", "status", "updated_at"])
+
+        if refund.status == PaymentRefund.Status.PENDING:
+            return order, "ЮKassa обрабатывает возврат средств. Повторите отмену позже."
+        if refund.status == PaymentRefund.Status.CANCELED:
+            return order, "ЮKassa отклонила возврат средств. Попробуйте ещё раз."
+
+    return _apply_cancellation(order, client, products, quantities), ""
+
+
+def cancel_order(client, *, order_id):
+    refund_id = _prepare_yookassa_refund(client, order_id)
+    try:
+        order, refund_error = _cancel_order(client, order_id, refund_id)
+    except YooKassaError as provider_error:
+        raise CancellationConflict(str(provider_error)) from provider_error
+    if refund_error:
+        raise CancellationConflict(refund_error)
+    return order
+
+
 def list_courier_orders(courier):
     require_courier(courier)
-    return Order.objects.filter(courier_id=courier.pk)
+    return Order.objects.filter(courier_id=courier.pk).exclude(status=Order.Status.CANCELLED)
 
 
 def get_courier_order(courier, order_id):
@@ -148,10 +287,17 @@ def assignment_version(order):
 @transaction.atomic
 def assign_courier(operator, *, order_id, courier, expected_assignment_version=None):
     require_admin(operator)
+    users = lock_users(operator.pk, courier.pk)
+    current_operator = users.get(operator.pk)
+    if current_operator is None:
+        raise PermissionDenied
+    require_admin(current_operator)
+
     order = get_object_or_404(Order.objects.select_for_update(), pk=order_id)
     if not can_assign_courier(order):
         raise DeliveryConflict("Курьера можно назначить подтверждённому заказу до его принятия.")
-    if not User.objects.filter(pk=courier.pk, role=User.Role.COURIER, is_active=True).exists():
+    current_courier = users.get(courier.pk)
+    if current_courier is None or current_courier.role != User.Role.COURIER or not current_courier.is_active:
         raise DeliveryConflict("Для назначения выберите активного курьера.")
     if order.courier_id == courier.pk:
         return order
@@ -182,9 +328,14 @@ def _transition_delivery(courier, *, order_id, source, target):
     return order
 
 
+@transaction.atomic
 def accept_delivery(courier, *, order_id):
+    require_courier(courier)
+    current_courier = lock_users(courier.pk).get(courier.pk)
+    if current_courier is None:
+        raise PermissionDenied
     return _transition_delivery(
-        courier, order_id=order_id, source=Order.Status.CONFIRMED, target=Order.Status.HANDED_TO_COURIER
+        current_courier, order_id=order_id, source=Order.Status.CONFIRMED, target=Order.Status.HANDED_TO_COURIER
     )
 
 
@@ -200,13 +351,44 @@ def complete_delivery(courier, *, order_id):
     )
 
 
+def confirm_paid_order(order):
+    """Confirm an order while the caller holds its row lock."""
+    if order.status != Order.Status.CREATED:
+        return False
+
+    items = list(order.items.order_by("product_id"))
+    products = {
+        product.pk: product
+        for product in Product.objects.select_for_update()
+        .filter(pk__in=[item.product_id for item in items])
+        .order_by("pk")
+    }
+    if not items or any(
+        not products[item.product_id].is_active
+        or products[item.product_id].stock_quantity < item.quantity
+        for item in items
+    ):
+        return False
+
+    for item in items:
+        products[item.product_id].stock_quantity -= item.quantity
+    Product.objects.bulk_update(products.values(), ["stock_quantity"])
+
+    order.status = Order.Status.CONFIRMED
+    order.save(update_fields=["status", "updated_at"])
+    OrderStatusHistory.objects.create(
+        order=order, from_status=Order.Status.CREATED, to_status=Order.Status.CONFIRMED
+    )
+    return True
+
+
 @transaction.atomic
 def confirm_mock_payment(client, *, order_id, attempt_key, outcome):
     order = get_object_or_404(list_client_orders(client).select_for_update(), pk=order_id)
-    existing = order.payment_attempts.filter(attempt_key=attempt_key).first()
+    existing = order.payment_attempts.filter(provider="mock", attempt_key=attempt_key).first()
     if existing:
         return existing
-    if order.status != Order.Status.CREATED:
+    if order.status != Order.Status.CREATED or order.payment_attempts.filter(provider="yookassa").exists():
         return None
 
     result = MockPaymentGateway.charge(
@@ -216,27 +398,13 @@ def confirm_mock_payment(client, *, order_id, attempt_key, outcome):
     )
     failure_reason = PaymentAttempt.FailureReason.MOCK_DECLINED
     if result == PaymentAttempt.Result.SUCCEEDED:
-        items = list(order.items.order_by("product_id"))
-        products = {
-            product.pk: product
-            for product in Product.objects.select_for_update()
-            .filter(pk__in=[item.product_id for item in items])
-            .order_by("pk")
-        }
-        if not items or any(
-            not products[item.product_id].is_active
-            or products[item.product_id].stock_quantity < item.quantity
-            for item in items
-        ):
+        if confirm_paid_order(order):
+            failure_reason = ""
+        else:
             result = PaymentAttempt.Result.FAILED
             failure_reason = PaymentAttempt.FailureReason.PRODUCT_UNAVAILABLE
-        else:
-            for item in items:
-                products[item.product_id].stock_quantity -= item.quantity
-            Product.objects.bulk_update(products.values(), ["stock_quantity"])
-            failure_reason = ""
 
-    attempt = PaymentAttempt.objects.create(
+    return PaymentAttempt.objects.create(
         order=order,
         attempt_key=attempt_key,
         result=result,
@@ -244,10 +412,3 @@ def confirm_mock_payment(client, *, order_id, attempt_key, outcome):
         amount=order.total_amount,
         currency=order.currency,
     )
-    if result == PaymentAttempt.Result.SUCCEEDED:
-        order.status = Order.Status.CONFIRMED
-        order.save(update_fields=["status", "updated_at"])
-        OrderStatusHistory.objects.create(
-            order=order, from_status=Order.Status.CREATED, to_status=Order.Status.CONFIRMED
-        )
-    return attempt
