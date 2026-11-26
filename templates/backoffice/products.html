@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Товары{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <h1 class="mb-0">Товары</h1>
+  <a class="btn btn-primary" href="{% url 'backoffice:product_create' %}">Добавить товар</a>
+</div>
+{% if page_obj.object_list %}
+  <ul class="list-group">
+    {% for product in page_obj %}
+      <li class="list-group-item p-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <div>
+            <a class="fw-semibold text-break" href="{% url 'backoffice:product_edit' product.pk %}">{{ product.name }}</a>
+            <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0 text-body-secondary small">
+              <li>{{ product.price|floatformat:2 }} ₽</li>
+              <li>Остаток {{ product.stock_quantity }} шт.</li>
+              <li>{% if product.is_active %}В каталоге{% else %}Скрыт{% endif %}</li>
+            </ul>
+          </div>
+          {% if product.is_active %}
+            <form method="post" action="{% url 'backoffice:product_hide' product.pk %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-primary btn-sm" type="submit" aria-label="Скрыть товар {{ product.name }}">Скрыть</button>
+            </form>
+          {% else %}
+            <form method="post" action="{% url 'backoffice:product_restore' product.pk %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-primary btn-sm" type="submit" aria-label="Вернуть товар {{ product.name }} в каталог">Вернуть в каталог</button>
+            </form>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if page_obj.has_other_pages %}
+    <nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4" aria-label="Страницы списка товаров">
+      <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+      <div class="d-flex flex-wrap gap-2">
+        {% if page_obj.has_previous %}<a class="btn btn-outline-primary" rel="prev" href="{% querystring page=page_obj.previous_page_number %}">Предыдущая</a>{% endif %}
+        {% if page_obj.has_next %}<a class="btn btn-outline-primary" rel="next" href="{% querystring page=page_obj.next_page_number %}">Следующая</a>{% endif %}
+      </div>
+    </nav>
+  {% endif %}
+{% else %}
+  <p>Товаров пока нет.</p>
+{% endif %}
+{% endblock %}
