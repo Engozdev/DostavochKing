@@ -1,0 +1,290 @@
+{
+  "blocked": false,
+  "cases": [
+    {
+      "id": "tests.e2e.test_client_flow.ClientJourneyTests.test_guest_cart_redirects_to_login",
+      "layer": "e2e",
+      "module": "client_flow",
+      "step": "Гость направляется на вход при открытии корзины",
+      "status": "passed",
+      "duration_ms": 240,
+      "detail": ""
+    },
+    {
+      "id": "tests.e2e.test_client_flow.ClientJourneyTests.test_purchase_journey",
+      "layer": "e2e",
+      "module": "client_flow",
+      "step": "Клиент проходит каталог, корзину, оформление и учебную оплату через HTTP",
+      "status": "passed",
+      "duration_ms": 331,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_accounts_catalog.AccountsCatalogIntegrationTests.test_catalog_search",
+      "layer": "integration",
+      "module": "accounts_catalog",
+      "step": "Поиск каталога показывает подходящий активный товар",
+      "status": "passed",
+      "duration_ms": 9,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_accounts_catalog.AccountsCatalogIntegrationTests.test_operator_route_checks_role",
+      "layer": "integration",
+      "module": "accounts_catalog",
+      "step": "Оператору доступен список заказов, клиенту доступ запрещён",
+      "status": "passed",
+      "duration_ms": 403,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_cart_orders.CartOrderIntegrationTests.test_add_item",
+      "layer": "integration",
+      "module": "cart_orders",
+      "step": "Добавление товара создаёт строку корзины и повышает её версию",
+      "status": "passed",
+      "duration_ms": 197,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_cart_orders.CartOrderIntegrationTests.test_checkout_creates_snapshot",
+      "layer": "integration",
+      "module": "cart_orders",
+      "step": "Оформление сохраняет снимок заказа и очищает корзину",
+      "status": "passed",
+      "duration_ms": 217,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_cart_orders.CartOrderIntegrationTests.test_checkout_is_idempotent",
+      "layer": "integration",
+      "module": "cart_orders",
+      "step": "Повтор запроса с тем же ключом возвращает прежний заказ",
+      "status": "passed",
+      "duration_ms": 224,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_cart_orders.CartOrderIntegrationTests.test_checkout_rejects_stale_quote",
+      "layer": "integration",
+      "module": "cart_orders",
+      "step": "Изменение корзины после получения предложения блокирует оформление",
+      "status": "passed",
+      "duration_ms": 221,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_cart_orders.CartOrderIntegrationTests.test_payment_confirms_order_once",
+      "layer": "integration",
+      "module": "cart_orders",
+      "step": "Успешная оплата подтверждает заказ и уменьшает остаток один раз",
+      "status": "passed",
+      "duration_ms": 235,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_cart_orders.CartOrderIntegrationTests.test_update_rejects_stale_version",
+      "layer": "integration",
+      "module": "cart_orders",
+      "step": "Старая версия не меняет количество товара",
+      "status": "passed",
+      "duration_ms": 210,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_delivery.DeliveryIntegrationTests.test_assign_courier",
+      "layer": "integration",
+      "module": "delivery",
+      "step": "Оператор назначает курьера с актуальной версией назначения",
+      "status": "passed",
+      "duration_ms": 587,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_delivery.DeliveryIntegrationTests.test_delivery_lifecycle",
+      "layer": "integration",
+      "module": "delivery",
+      "step": "Доставка проходит этапы принятия, пути и вручения",
+      "status": "passed",
+      "duration_ms": 613,
+      "detail": ""
+    },
+    {
+      "id": "tests.integration.test_delivery.DeliveryIntegrationTests.test_invalid_transition",
+      "layer": "integration",
+      "module": "delivery",
+      "step": "Повторное действие в неправильном статусе не продвигает доставку",
+      "status": "passed",
+      "duration_ms": 610,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_accounts.AccessRulesTests.test_active_client_is_allowed",
+      "layer": "unit",
+      "module": "accounts",
+      "step": "Активный клиент проходит проверку роли",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_accounts.AccessRulesTests.test_client_cannot_act_as_admin",
+      "layer": "unit",
+      "module": "accounts",
+      "step": "Клиент не получает права оператора",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_accounts.AccessRulesTests.test_inactive_user_is_denied",
+      "layer": "unit",
+      "module": "accounts",
+      "step": "Заблокированный пользователь не проходит проверку роли",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_cart.CartRulesTests.test_quantity_exceeds_stock",
+      "layer": "unit",
+      "module": "cart",
+      "step": "Количество выше остатка отклоняется",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_cart.CartRulesTests.test_stale_version",
+      "layer": "unit",
+      "module": "cart",
+      "step": "Устаревшая версия корзины вызывает конфликт",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_cart.CartRulesTests.test_unavailable_product",
+      "layer": "unit",
+      "module": "cart",
+      "step": "Товар без остатка недоступен для добавления",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_catalog.ProductRulesTests.test_available_product",
+      "layer": "unit",
+      "module": "catalog",
+      "step": "Активный товар с остатком доступен для покупки",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_catalog.ProductRulesTests.test_hidden_product",
+      "layer": "unit",
+      "module": "catalog",
+      "step": "Скрытый товар не доступен даже при наличии остатка",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_orders.OrderRulesTests.test_assignment_rule",
+      "layer": "unit",
+      "module": "orders",
+      "step": "Назначение курьера доступно до принятия подтверждённого заказа",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_orders.OrderRulesTests.test_assignment_version",
+      "layer": "unit",
+      "module": "orders",
+      "step": "Версия назначения меняется при смене курьера",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_orders.OrderRulesTests.test_cancellation_rule",
+      "layer": "unit",
+      "module": "orders",
+      "step": "Отмена доступна только подтверждённому заказу",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_orders.OrderRulesTests.test_quote_data",
+      "layer": "unit",
+      "module": "orders",
+      "step": "Снимок корзины содержит версию и состав",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_orders.OrderRulesTests.test_total",
+      "layer": "unit",
+      "module": "orders",
+      "step": "Сумма заказа складывается из цен и количества",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_payments.PaymentRulesTests.test_confirmation_url_rejects_http",
+      "layer": "unit",
+      "module": "payments",
+      "step": "Для оплаты принимается только HTTPS-ссылка",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_payments.PaymentRulesTests.test_creation_window_expires",
+      "layer": "unit",
+      "module": "payments",
+      "step": "Повторное создание платежа ограничено 24 часами",
+      "status": "passed",
+      "duration_ms": 1,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_payments.PaymentRulesTests.test_mock_gateway_accepts_success",
+      "layer": "unit",
+      "module": "payments",
+      "step": "Учебный шлюз принимает успешную оплату в рублях",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_payments.PaymentRulesTests.test_mock_gateway_rejects_currency",
+      "layer": "unit",
+      "module": "payments",
+      "step": "Учебный шлюз отклоняет некорректную валюту",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    },
+    {
+      "id": "tests.unit.test_payments.PaymentRulesTests.test_provider_payment_rejects_wrong_amount",
+      "layer": "unit",
+      "module": "payments",
+      "step": "Ответ внешнего шлюза сверяется с суммой заказа",
+      "status": "passed",
+      "duration_ms": 0,
+      "detail": ""
+    }
+  ],
+  "generated_at": "2026-11-27T16:11:59+00:00",
+  "planned": {
+    "unit": 18,
+    "integration": 11,
+    "e2e": 2
+  }
+}
